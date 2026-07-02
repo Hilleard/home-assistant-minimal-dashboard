@@ -1,0 +1,668 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+:root {
+  --paper: #F4F2EE;
+  --ink: #1a1814;
+  --muted-1: #56534c;
+  --muted-2: #75726a;
+  --muted-3: #8f8c82;
+  --muted-4: #9a978d;
+  --hairline: rgba(0, 0, 0, 0.18);
+  --hairline-soft: rgba(0, 0, 0, 0.14);
+  --hairline-faint: rgba(0, 0, 0, 0.1);
+
+  /* The only font sizes used anywhere in the dashboard. */
+  --fs-hero: 120px; /* clock, heating temp */
+  --fs-weather: 60px; /* current-weather temp only */
+  --fs-body: 32px; /* everything else primary */
+  --fs-note: 28px; /* top-row notifications/meal, joke */
+  --fs-small: 24px; /* muted/secondary text */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+body {
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  background: var(--paper) !important;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+/* ============================================================= */
+/* LAYOUT                                                         */
+/* ============================================================= */
+
+.dashboard {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--paper);
+  display: grid;
+  grid-template-rows: 115px 1fr auto;
+  overflow: hidden;
+}
+
+.swipe-viewport {
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+
+.swipe-track {
+  display: flex;
+  width: 300%;
+  height: 100%;
+}
+
+.swipe-slide {
+  width: 33.3333%;
+  height: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.body-left {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  padding: 80px 80px 80px 80px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.body-left::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 80px;
+  bottom: 80px;
+  width: 1px;
+  background: var(--hairline);
+}
+
+.body-right {
+  min-width: 0;
+  height: 100%;
+  padding: 80px 80px 0 80px;
+  overflow-y: auto;
+}
+
+.demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  text-align: center;
+  font-size: var(--fs-small);
+  padding: 0.4vh 0;
+  background: #d8c9a0;
+  color: var(--ink);
+}
+
+.demo-banner--error {
+  background: #d8a0a0;
+}
+
+/* ============================================================= */
+/* ALERTS BAR                                                     */
+/* ============================================================= */
+
+.alerts-bar {
+  display: flex;
+  align-items: center;
+  height: 115px;
+  justify-content: space-between;
+  padding: 0px 80px;
+  border-bottom: 1px solid var(--hairline);
+  overflow: hidden;
+}
+
+.alerts-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 3vw;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.alerts-bar-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.alert-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6vw;
+  flex-shrink: 0;
+}
+
+.alert-name {
+  font-size: var(--fs-note);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.alert-label {
+  font-size: var(--fs-note);
+  font-weight: 400;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+/* ============================================================= */
+/* MASTHEAD                                                       */
+/* ============================================================= */
+
+.masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  flex-shrink: 0;
+}
+
+.masthead-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.masthead-col--end {
+  align-items: flex-end;
+}
+
+.masthead-label {
+  font-size: var(--fs-body);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.masthead-value {
+  font-size: var(--fs-hero);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* ============================================================= */
+/* WEATHER                                                        */
+/* ============================================================= */
+
+.weather-panel {
+  margin-top: 1.6vh;
+  overflow: hidden;
+}
+
+.weather-today {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.4vw;
+  padding: 40px 0;
+  border-bottom: 1px solid var(--hairline-soft);
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.weather-today-top {
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+}
+
+.weather-today-temp {
+  font-size: var(--fs-weather);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.weather-today-condition-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3vh;
+}
+
+.weather-today-condition {
+  font-size: var(--fs-body);
+  line-height: 1;
+}
+
+.weather-today-detail {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.weather-today-hilo {
+  font-size: var(--fs-body);
+}
+
+.weather-today-hilo .weather-row-hi {
+  font-weight: 500;
+}
+
+.weather-today-hilo .weather-row-lo {
+  color: var(--muted-4);
+  font-weight: 400;
+}
+
+.weather-today-rain {
+  font-size: var(--fs-small);
+  margin-top: 0.2vh;
+  color: var(--muted-2);
+}
+
+.weather-today-summary {
+  font-size: var(--fs-small);
+  color: var(--muted-2);
+}
+
+.weather-row {
+  display: grid;
+  grid-template-columns: 1fr 2.4vh auto;
+  align-items: center;
+  gap: 1.2vw;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hairline-faint);
+}
+.weather-row:last-child {
+  border-bottom: none;
+}
+
+.weather-row-label {
+  font-size: var(--fs-body);
+  text-align: left;
+}
+
+.weather-row-temps {
+  font-size: var(--fs-body);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.weather-row-hi {
+  font-weight: 600;
+}
+
+.weather-row-lo {
+  color: var(--muted-4);
+}
+
+/* ============================================================= */
+/* CALENDAR                                                       */
+/* ============================================================= */
+
+.calendar-column {
+  padding-top: 0;
+}
+
+.calendar-day-label {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-3);
+  margin: 0 0 1.1vh 0;
+}
+
+.calendar-day + .calendar-day {
+  border-top: 1px solid var(--hairline-faint);
+  margin-top: 40px;
+  padding-top: 40px;
+}
+
+.calendar-day:last-child {
+  padding-bottom: 80px;
+}
+
+.calendar-event {
+  padding: 0.9vh 0 1.1vh 0;
+  text-align: left;
+}
+
+.calendar-event-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.calendar-event-time {
+  font-size: var(--fs-small);
+  color: var(--muted-2);
+  margin-top: 0.2vh;
+}
+
+/* ============================================================= */
+/* JOKE                                                           */
+/* ============================================================= */
+
+.joke {
+  display: flex;
+  align-items: center;
+  padding: 40px 80px;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--fs-note);
+  color: var(--muted-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================= */
+/* GARAGE DOOR BANNER                                             */
+/* ============================================================= */
+
+.garage-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  /* Same box as .joke (padding + font-size + a same-width border) so the
+     two are pixel-identical in height without measuring either at runtime. */
+  padding: 40px 80px;
+  border-top: 1px solid transparent;
+  font-size: var(--fs-note);
+  background: #000;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transform: translateY(100%);
+  transition: transform 0.3s ease, opacity 0.15s ease;
+}
+
+.garage-banner--visible {
+  transform: translateY(0);
+}
+
+.garage-banner:active {
+  opacity: 0.8;
+}
+
+.garage-banner:disabled {
+  cursor: default;
+}
+
+.garage-banner-name {
+  font-weight: 600;
+}
+
+.garage-banner-time {
+  color: rgb(85, 85, 85);
+}
+
+/* ============================================================= */
+/* KIDS' CHARTS                                                 */
+/* ============================================================= */
+
+:root {
+  --kids-gold: #e0a723;
+  --kids-green: #3f9463;
+}
+
+.kids-page {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  padding: 80px;
+}
+
+.kids-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  border: 1px solid var(--hairline);
+  border-radius: 32px;
+  padding: 60px;
+  color: var(--ink);
+  background-color: rgba(255, 255, 255, 0.75);
+}
+.kids-panel-title-container {
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  gap: 8px;
+}
+.kids-panel-title {
+  font-size: var(--fs-body);
+  font-weight: 400;
+}
+
+.kids-countdown-line {
+  font-size: 80px;
+  font-weight: 400;
+}
+
+.kids-countdown-line-number {
+  font-weight: 700;
+}
+
+.kids-star-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kids-star-grid-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kids-star {
+  color: var(--muted-4);
+  width: 80px;
+  height: 80px;
+}
+
+.kids-star--filled {
+  color: var(--kids-gold);
+}
+
+.kids-star-undo {
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.kids-star-undo:active {
+  transform: scale(0.85);
+}
+
+.kids-cta-button {
+  padding: 32px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 24px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.kids-cta-button:active {
+  transform: scale(0.97);
+}
+
+.kids-cta-button:disabled {
+  color: var(--muted-3);
+}
+
+.kids-behaviour-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.kids-behaviour-item {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 32px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 24px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.kids-behaviour-item:active {
+  transform: scale(0.97);
+}
+
+.kids-behaviour-item svg {
+  color: var(--muted-3);
+  flex-shrink: 0;
+}
+
+.kids-behaviour-item--done svg {
+  color: var(--kids-green);
+}
+
+/* ============================================================= */
+/* HOURLY FORECAST MODAL                                          */
+/* ============================================================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hourly-modal {
+  width: 900px;
+  max-height: 1000px;
+  background: var(--paper);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hourly-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40px 48px 24px;
+  border-bottom: 1px solid var(--hairline-soft);
+  flex-shrink: 0;
+}
+
+.hourly-modal-title {
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.hourly-modal-close {
+  background: none;
+  border: none;
+  font-size: 48px;
+  line-height: 1;
+  color: var(--muted-1);
+  cursor: pointer;
+  padding: 0;
+}
+
+.hourly-modal-list {
+  overflow-y: auto;
+  padding: 0 48px 24px;
+}
+
+.hourly-modal-row {
+  display: grid;
+  grid-template-columns: 80px 32px 1fr 80px 90px;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--hairline-faint);
+  font-size: var(--fs-note);
+}
+
+.hourly-modal-row:last-of-type {
+  border-bottom: none;
+}
+
+.hourly-modal-time {
+  font-weight: 500;
+}
+
+.hourly-modal-condition {
+  color: var(--muted-1);
+}
+
+.hourly-modal-rain {
+  color: var(--muted-2);
+  text-align: right;
+}
+
+.hourly-modal-temp {
+  font-weight: 600;
+  text-align: right;
+}
