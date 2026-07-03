@@ -1,9 +1,11 @@
 import type { HassEntities } from "home-assistant-js-websocket";
-import { mdiSilverwareForkKnife, mdiTrashCanOutline, mdiPaw, mdiPill } from "@mdi/js";
+import { mdiSilverwareForkKnife, mdiTrashCanOutline, mdiPaw, mdiPill, mdiMedication } from "@mdi/js";
 import { Icon } from "./Icon";
 import { ENTITIES } from "../config";
 import { useNow } from "../ha/useNow";
 import { useToggle } from "../ha/useServices";
+import { useDuePetTreatments } from "../ha/usePetTreatments";
+import { useDoubleTap } from "../hooks/useDoubleTap";
 
 interface Alert {
   key: string;
@@ -50,7 +52,11 @@ function binDaysAway(entities: HassEntities): number | null {
 export function AlertsBar({ entities }: { entities: HassEntities }) {
   const now = useNow(30_000);
   const toggle = useToggle();
+  const dueTreatments = useDuePetTreatments(entities);
   const alerts: Alert[] = [];
+
+  const { armedKey, handleTap } = useDoubleTap();
+  const handleDoubleTap = (key: string, entityId: string) => handleTap(key, () => toggle(entityId));
 
   let meal: Alert | null = null;
   const mealEvent = entities[ENTITIES.mealSchedule];
@@ -76,13 +82,23 @@ export function AlertsBar({ entities }: { entities: HassEntities }) {
     });
   }
 
+  for (const t of dueTreatments) {
+    alerts.push({
+      key: t.key,
+      icon: t.treatmentName === "Worming" ? mdiMedication : mdiPill,
+      name: t.petName,
+      label: t.treatmentName,
+      onClick: () => handleDoubleTap(t.key, t.entity),
+    });
+  }
+
   if (entities[ENTITIES.petAFedMorning]?.state === "off") {
     alerts.push({
       key: "feed-am",
       icon: mdiPaw,
       name: "Feed Pet A",
       label: "Morning",
-      onClick: () => toggle(ENTITIES.petAFedMorning),
+      onClick: () => handleDoubleTap("feed-am", ENTITIES.petAFedMorning),
     });
   }
   if (entities[ENTITIES.petAFedEvening]?.state === "off") {
@@ -91,31 +107,18 @@ export function AlertsBar({ entities }: { entities: HassEntities }) {
       icon: mdiPaw,
       name: "Feed Pet A",
       label: "Evening",
-      onClick: () => toggle(ENTITIES.petAFedEvening),
-    });
-  }
-  if (entities[ENTITIES.petAFleaTablet]?.state === "off") {
-    alerts.push({
-      key: "tablet-a",
-      icon: mdiPill,
-      name: "Pet A",
-      label: "Flea & Worming",
-      onClick: () => toggle(ENTITIES.petAFleaTablet),
-    });
-  }
-  if (entities[ENTITIES.petBFleaTablet]?.state === "off") {
-    alerts.push({
-      key: "tablet-b",
-      icon: mdiPill,
-      name: "Pet B",
-      label: "Flea & Worming",
-      onClick: () => toggle(ENTITIES.petBFleaTablet),
+      onClick: () => handleDoubleTap("feed-pm", ENTITIES.petAFedEvening),
     });
   }
 
   function chip(a: Alert) {
     return (
-      <button key={a.key} className="alert-chip" onClick={a.onClick} disabled={!a.onClick}>
+      <button
+        key={a.key}
+        className={`alert-chip${a.key === armedKey ? " alert-chip--armed" : ""}`}
+        onClick={a.onClick}
+        disabled={!a.onClick}
+      >
         <Icon path={a.icon} size="2.3vh" />
         <span className="alert-name">{a.name}</span>
         {a.label && <span className="alert-label">{a.label}</span>}

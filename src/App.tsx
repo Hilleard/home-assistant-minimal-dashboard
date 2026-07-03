@@ -1,10 +1,13 @@
+import { useEffect } from "react";
 import { AlertsBar } from "./components/AlertsBar";
 import { Masthead } from "./components/Masthead";
 import { WeatherPanel } from "./components/WeatherPanel";
 import { CalendarColumn } from "./components/CalendarColumn";
 import { Joke } from "./components/Joke";
 import { GarageDoorBanner } from "./components/GarageDoorBanner";
+import { DoorbellModal } from "./components/DoorbellModal";
 import { KidsPage } from "./components/KidsPage";
+import { ENTITIES } from "./config";
 import { useEntities } from "./ha/useEntities";
 import { useForecast } from "./ha/useForecast";
 import { useCalendarEvents } from "./ha/useCalendarEvents";
@@ -15,6 +18,14 @@ function App() {
   const forecast = useForecast();
   const agenda = useCalendarEvents();
   const swipe = useSwipePage();
+  const isDark = entities[ENTITIES.sun]?.state === "below_horizon";
+
+  // On <body> rather than just the dashboard div, so the hourly-forecast
+  // and doorbell modals — which portal straight into document.body — pick
+  // up the theme too.
+  useEffect(() => {
+    document.body.classList.toggle("dark-mode", isDark);
+  }, [isDark]);
 
   const renderSlide = (pageId: 0 | 1, key: number) =>
     pageId === 0 ? (
@@ -60,6 +71,7 @@ function App() {
 
       <Joke entities={entities} />
       <GarageDoorBanner entities={entities} />
+      <DoorbellModal entities={entities} />
     </div>
   );
 }

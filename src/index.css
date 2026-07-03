@@ -12,6 +12,7 @@
   --hairline: rgba(0, 0, 0, 0.18);
   --hairline-soft: rgba(0, 0, 0, 0.14);
   --hairline-faint: rgba(0, 0, 0, 0.1);
+  --panel-bg: rgba(255, 255, 255, 0.75);
 
   /* The only font sizes used anywhere in the dashboard. */
   --fs-hero: 120px; /* clock, heating temp */
@@ -66,9 +67,30 @@ button {
   width: 100vw;
   height: 100vh;
   background-color: var(--paper);
+  color: var(--ink);
   display: grid;
   grid-template-rows: 115px 1fr auto;
   overflow: hidden;
+  transition: background-color 1s ease, color 1s ease;
+}
+
+/* Switched on automatically at real sunset/sunrise (see sun.sun in
+   App.tsx) — every color in the app is a CSS variable, so overriding them
+   here is enough to flip the whole dashboard without touching individual
+   component styles. Lives on <body> rather than .dashboard so it also
+   reaches the hourly-forecast/doorbell modals, which portal straight into
+   document.body and would otherwise sit outside .dashboard entirely. */
+body.dark-mode {
+  --paper: #17150f;
+  --ink: #f4f2ee;
+  --muted-1: #c9c6bb;
+  --muted-2: #a6a398;
+  --muted-3: #7d7a70;
+  --muted-4: #66635a;
+  --hairline: rgba(255, 255, 255, 0.18);
+  --hairline-soft: rgba(255, 255, 255, 0.14);
+  --hairline-faint: rgba(255, 255, 255, 0.1);
+  --panel-bg: rgba(255, 255, 255, 0.08);
 }
 
 .swipe-viewport {
@@ -176,6 +198,12 @@ button {
   align-items: center;
   gap: 0.6vw;
   flex-shrink: 0;
+}
+
+/* First tap of a double-tap-to-dismiss alert — a visible cue that it's
+   armed and needs a second tap, rather than looking unresponsive. */
+.alert-chip--armed {
+  opacity: 0.4;
 }
 
 .alert-name {
@@ -388,6 +416,7 @@ button {
 .joke {
   display: flex;
   align-items: center;
+  width: 100%;
   padding: 40px 80px;
   border-top: 1px solid var(--hairline);
   font-size: var(--fs-note);
@@ -395,6 +424,12 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
+  cursor: pointer;
+}
+
+.joke--armed {
+  opacity: 0.4;
 }
 
 /* ============================================================= */
@@ -472,7 +507,7 @@ button {
   border-radius: 32px;
   padding: 60px;
   color: var(--ink);
-  background-color: rgba(255, 255, 255, 0.75);
+  background-color: var(--panel-bg);
 }
 .kids-panel-title-container {
   display: flex;
@@ -610,7 +645,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 40px 48px 24px;
+  padding: 48px;
   border-bottom: 1px solid var(--hairline-soft);
   flex-shrink: 0;
 }
@@ -665,4 +700,25 @@ button {
 .hourly-modal-temp {
   font-weight: 600;
   text-align: right;
+}
+
+/* ============================================================= */
+/* DOORBELL MODAL                                                 */
+/* ============================================================= */
+
+.doorbell-modal {
+  position: absolute;
+  inset: 80px;
+  background: var(--paper);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.doorbell-modal-image {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  object-fit: cover;
 }

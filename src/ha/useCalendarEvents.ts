@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { AGENDA_CALENDARS, AGENDA_DAYS, CALENDAR_REFRESH_MS, HA_TOKEN } from "../config";
+import {
+  AGENDA_CALENDARS,
+  AGENDA_CALENDAR_LABELS,
+  AGENDA_DAYS,
+  CALENDAR_REFRESH_MS,
+  HA_TOKEN,
+} from "../config";
 import { isHaConfigured } from "./connection";
 
 export interface AgendaEvent {
@@ -18,6 +24,10 @@ interface RawCalendarEvent {
   summary?: string;
   start: { date?: string; dateTime?: string };
   end: { date?: string; dateTime?: string };
+}
+
+interface SourcedCalendarEvent extends RawCalendarEvent {
+  calendarId: string;
 }
 
 function startOfDay(offset: number): Date {
@@ -60,7 +70,9 @@ async function loadAgenda(): Promise<AgendaDay[]> {
     }
   });
 
-  const allEvents = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  const allEvents: SourcedCalendarEvent[] = results.flatMap((r, i) =>
+    r.status === "fulfilled" ? r.value.map((e) => ({ ...e, calendarId: AGENDA_CALENDARS[i] })) : [],
+  );
 
   const days: AgendaDay[] = [];
   for (let offset = 0; offset < AGENDA_DAYS; offset++) {
@@ -76,8 +88,13 @@ async function loadAgenda(): Promise<AgendaDay[]> {
       })
       .map<AgendaEvent>((e) => {
         const allDay = !e.start.dateTime;
+        const label = AGENDA_CALENDAR_LABELS[e.calendarId];
+        const title = e.summary ?? "Untitled";
+        // Some source calendars are already titled "Name - thing" — don't
+        // double up the prefix in that case.
+        const alreadyPrefixed = label && title.toLowerCase().startsWith(`${label.toLowerCase()} - `);
         return {
-          title: e.summary ?? "Untitled",
+          title: label && !alreadyPrefixed ? `${label} - ${title}` : title,
           start: allDay ? undefined : formatTime(e.start.dateTime!),
           end: allDay ? undefined : e.end.dateTime ? formatTime(e.end.dateTime) : undefined,
           allDay,

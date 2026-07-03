@@ -10,6 +10,11 @@ const DIRECTION_LOCK_PX = 10;
 // `transition: transform` duration applied in App.tsx.
 const SETTLE_MS = 250;
 
+// How long the kids' charts page can sit untouched before it auto-returns
+// to the dashboard — mainly so a child leaving it parked there doesn't
+// leave the dashboard stuck showing charts instead of the weather/calendar.
+const IDLE_RETURN_MS = 5 * 60 * 1000;
+
 const SLOT_PCT = 100 / 3;
 
 function mod2(n: number): 0 | 1 {
@@ -17,9 +22,9 @@ function mod2(n: number): 0 | 1 {
 }
 
 // Two pages (dashboard, kids' charts) that loop endlessly in either
-// direction: swiping left from the second page goes back to the dashboard (rather
-// than getting stuck), and vice versa, always continuing in the direction
-// you're already dragging.
+// direction: swiping left from the second page goes back to the dashboard
+// (rather than getting stuck), and vice versa, always continuing in the
+// direction you're already dragging.
 //
 // This is the standard "3 slot" infinite-carousel trick: we always render
 // the previous/current/next page either side of `step`, drag between them
@@ -37,13 +42,47 @@ export function useSwipePage() {
   const liveOffset = useRef(0);
   const settleTimeout = useRef<number | undefined>(undefined);
   const recenterTimeout = useRef<number | undefined>(undefined);
+  const idleTimeout = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     return () => {
       window.clearTimeout(settleTimeout.current);
       window.clearTimeout(recenterTimeout.current);
+      window.clearTimeout(idleTimeout.current);
     };
   }, []);
+
+  // Animates to the neighbouring slot (same visual sequence a real swipe
+  // triggers) and, once the transition finishes, instantly recentres `step`
+  // there so a buffer slot is ready again on both sides.
+  const settle = useCallback((stepDelta: 1 | -1) => {
+    window.clearTimeout(settleTimeout.current);
+    window.clearTimeout(recenterTimeout.current);
+    setTransitionEnabled(true);
+    setShiftFraction(-stepDelta);
+    settleTimeout.current = window.setTimeout(() => {
+      setTransitionEnabled(false);
+      setStep((s) => s + stepDelta);
+      setShiftFraction(0);
+      recenterTimeout.current = window.setTimeout(() => setTransitionEnabled(true), 20);
+    }, SETTLE_MS);
+  }, []);
+
+  // Resets on any touch/drag activity, and re-armed whenever the page
+  // changes — only actually counts down while sat on the kids' charts page.
+  const resetIdleTimer = useCallback(() => {
+    window.clearTimeout(idleTimeout.current);
+    setStep((s) => {
+      if (mod2(s) === 1) {
+        idleTimeout.current = window.setTimeout(() => settle(-1), IDLE_RETURN_MS);
+      }
+      return s;
+    });
+  }, [settle]);
+
+  useEffect(() => {
+    resetIdleTimer();
+  }, [step, resetIdleTimer]);
 
   const begin = useCallback((clientX: number) => {
     window.clearTimeout(settleTimeout.current);
@@ -90,10 +129,14 @@ export function useSwipePage() {
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const touchDirection = useRef<"horizontal" | "vertical" | null>(null);
 
-  const onTouchStart = useCallback((e: TouchEvent) => {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    touchDirection.current = null;
-  }, []);
+  const onTouchStart = useCallback(
+    (e: TouchEvent) => {
+      touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      touchDirection.current = null;
+      resetIdleTimer();
+    },
+    [resetIdleTimer],
+  );
 
   const onTouchMove = useCallback(
     (e: TouchEvent) => {
@@ -126,9 +169,10 @@ export function useSwipePage() {
   const onMouseDown = useCallback(
     (e: ReactMouseEvent) => {
       e.preventDefault();
+      resetIdleTimer();
       begin(e.clientX);
     },
-    [begin],
+    [begin, resetIdleTimer],
   );
 
   // mousemove/mouseup are tracked on window rather than the element, since
@@ -146,8 +190,8 @@ export function useSwipePage() {
   }, [isDragging, move, end]);
 
   // The three slots rendered side by side: previous / current / next page,
-  // each identified by which logical page (0 = dashboard, 1 = kids' charts) they
-  // hold right now.
+  // each identified by which logical page (0 = dashboard, 1 = kids' charts)
+  // they hold right now.
   const slots: [0 | 1, 0 | 1, 0 | 1] = [mod2(step - 1), mod2(step), mod2(step + 1)];
   const trackPercent = (-1 + shiftFraction) * SLOT_PCT;
 

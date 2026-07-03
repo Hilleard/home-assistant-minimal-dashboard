@@ -17,6 +17,38 @@ export function useToggle() {
   }, []);
 }
 
+// Explicit turn_off (unlike toggle, safe to call repeatedly) — used to
+// auto-reset pet treatment booleans back to "not done" when a new due month
+// starts.
+export function useTurnOff() {
+  return useCallback(async (entityId: string) => {
+    if (!isHaConfigured()) return;
+    const domain = entityId.split(".")[0];
+    const conn = await getConnection();
+    await conn.sendMessagePromise({
+      type: "call_service",
+      domain,
+      service: "turn_off",
+      target: { entity_id: entityId },
+    });
+  }, []);
+}
+
+// Forces HA to immediately re-poll an entity rather than waiting for its
+// next scheduled interval — used to fetch a new joke on double-tap.
+export function useUpdateEntity() {
+  return useCallback(async (entityId: string) => {
+    if (!isHaConfigured()) return;
+    const conn = await getConnection();
+    await conn.sendMessagePromise({
+      type: "call_service",
+      domain: "homeassistant",
+      service: "update_entity",
+      target: { entity_id: entityId },
+    });
+  }, []);
+}
+
 // Bumps a `counter.*` entity by one — used by the kids' charts.
 export function useIncrementCounter() {
   return useCallback(async (entityId: string) => {
